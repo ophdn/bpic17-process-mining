@@ -1,0 +1,59 @@
+========================================================================
+LOOP FREQUENCY REPORT — updated IMf model
+========================================================================
+
+Loop 1 — O_Create Offer / O_Created  [skip_6, skip_7]
+------------------------------------------------------------
+ Occurrences/case  # Cases     %  Cumulative %
+                1    19170 89.01         89.01
+                2     2323 10.79         99.79
+                3       45  0.21        100.00
+  → ⚠️  CONSIDER BOUNDING — 89.0% of cases have ≤1 occurrence
+
+Loop 2 — W_Validate application  [init_loop_23, skip_25]
+------------------------------------------------------------
+ Occurrences/case  # Cases     %  Cumulative %
+                0    16652 77.31         77.31
+                1     3808 17.68         94.99
+                2      989  4.59         99.59
+                3       89  0.41        100.00
+  → ⚠️  CONSIDER BOUNDING — 95.0% of cases have ≤1 occurrence
+
+Loop 3 — A_Validating / A_Incomplete  [skip_30]
+------------------------------------------------------------
+ Occurrences/case  # Cases     %  Cumulative %
+                0     8383 38.92         38.92
+                1     8118 37.69         76.61
+                2     4580 21.26         97.88
+                3      457  2.12        100.00
+  → ❌  KEEP LOOP — only 76.6% of cases have ≤1 occurrence
+
+Loop 4 — O_Refused repeat  [skip_34]
+------------------------------------------------------------
+ Occurrences/case  # Cases     %  Cumulative %
+                0    19446 90.29         90.29
+                1     1976  9.17         99.46
+                2      116  0.54        100.00
+  → ✅  SAFE TO REMOVE — 99.5% of cases have ≤1 occurrence
+
+Loop 5 — O_Returned  [tauSplit_20 branch]
+------------------------------------------------------------
+ Occurrences/case  # Cases     %  Cumulative %
+                0     8383 38.92         38.92
+                1    13155 61.08        100.00
+  → ✅  SAFE TO REMOVE — 100.0% of cases have ≤1 occurrence
+
+========================================================================
+ESTIMATED MAX FITNESS LOSS IF LOOP IS FULLY REMOVED
+========================================================================
+                       Loop  Cases repeating  Max fitness loss % Safe to remove?
+ O_Create Offer / O_Created             2368               10.99        ⚠️ Maybe
+     W_Validate application             1078                5.01        ⚠️ Maybe
+A_Validating / A_Incomplete             5037               23.39            ❌ No
+           O_Refused repeat              116                0.54           ✅ Yes
+                 O_Returned                0                0.00           ✅ Yes
+
+Decision guide:
+  Max fitness loss < 5%  → remove safely (fitness stays well above 80%)
+  Max fitness loss 5–15% → remove only if current fitness > 0.90
+  Max fitness loss > 15% → keep the loop

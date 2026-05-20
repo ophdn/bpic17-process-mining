@@ -39,7 +39,7 @@ TARGET_PRECISION      = 0.60
 TARGET_GENERALIZATION = 0.85
 
 # ── Preprocessing config ──────────────────────────────────────────────────────
-RARE_VARIANT_THRESHOLD = 100
+RARE_VARIANT_THRESHOLD = 20
 FRAUD_ACTIVITY         = "W_Assess potential fraud"
 INVALID_END_ACTIVITIES = {
     "O_Sent (mail and online)",
@@ -67,40 +67,62 @@ GRAPHVIZ_AVAILABLE = _ensure_graphviz()
 # METRICS
 # ─────────────────────────────────────────────────────────────────────────────
 def simplicity_structural(net):
-    """S1: Structural Appropriateness a_S (Rozinat & van der Aalst 2008)."""
-    T   = len(net.transitions)
-    T_V = sum(1 for t in net.transitions if t.label is not None)
-    P   = len(net.places)
-    if T == 0 or (P - T_V + 2) <= 0:
+    """S1: Structural Appropriateness 
+    a_s = (|T| + 2) / (|P| + |T| + |F|)
+    """
+    n_t = len(net.transitions)
+    n_p = len(net.places)
+    n_f = len(net.arcs)
+    denominator = n_p + n_t + n_f
+    if denominator == 0:
         return 0.0
-    return round((T_V / (T + 1)) * (1 / (P - T_V + 2)), 4)
+    return round((n_t + 2) / denominator, 4)
 
 
 def simplicity_advanced(net):
     """S2: Advanced Structural Appropriateness a'_S (Rozinat & van der Aalst 2008, Metric 7)."""
-    T = len(net.transitions)
-    if T == 0:
+    n_t = len(net.transitions)
+    if n_t == 0:
         return 0.0
-    label_counts = Counter(t.label for t in net.transitions if t.label is not None)
-    T_DA = sum(1 for t in net.transitions
-               if t.label is not None and label_counts[t.label] > 1)
-    T_IR = sum(
-        1 for t in net.transitions
-        if t.label is None
-        and sum(1 for a in net.arcs if a.target == t) == 1
-        and sum(1 for a in net.arcs if a.source == t) == 1
+
+    # T_DA: duplicate labeled transitions
+    label_counts = Counter(
+        t.label for t in net.transitions if t.label is not None
     )
-    return round((T - (T_DA + T_IR)) / T, 4)
+    t_da = {t for t in net.transitions
+            if t.label is not None and label_counts[t.label] > 1}
+
+    # T_IR: silent transitions with identical in/out arc sets as another transition
+    def arc_signature(t):
+        ins  = frozenset(a.source.name for a in net.arcs if a.target == t)
+        outs = frozenset(a.target.name for a in net.arcs if a.source == t)
+        return (ins, outs)
+
+    silent = [t for t in net.transitions if t.label is None]
+    sig_counts = Counter(arc_signature(t) for t in silent)
+    t_ir = {t for t in silent if sig_counts[arc_signature(t)] > 1}
+
+    return round((n_t - (len(t_da) + len(t_ir))) / n_t, 4)
 
 
-def compute_metrics(log_eval, net, im, fm):
-    """Always evaluate against log_eval (= original raw log)."""
+def compute_metrics(log_eval, net, im, fm, log_train=None):
+    """
+    Evaluate model quality.
+    - fitness_tbr / precision / generalization / simplicity: against log_eval (= log_v1, for comparability)
+    - perc_fit_traces: against log_train (= step-specific log) if provided, else log_eval
+    """
     m = evaluation_all.apply(log_eval, net, im, fm)
+    if log_train is not None:
+        m_train = evaluation_all.apply(log_train, net, im, fm)
+        perc_fit = round(m_train["fitness"]["perc_fit_traces"], 4)
+    else:
+        perc_fit = round(m["fitness"]["perc_fit_traces"], 4)
     return {
-        "fitness_tbr"      : round(m["fitness"]["log_fitness"], 4),
-        "precision_etc"    : round(m["precision"],              4),
-        "generalization"   : round(m["generalization"],         4),
-        "simplicity_pm4py" : round(m["simplicity"],             4),
+        "fitness_tbr"      : round(m["fitness"]["log_fitness"],      4),
+        "perc_fit_traces"  : perc_fit,
+        "precision_etc"    : round(m["precision"],                   4),
+        "generalization"   : round(m["generalization"],              4),
+        "simplicity_pm4py" : round(m["simplicity"],                  4),
         "S1_structural"    : simplicity_structural(net),
         "S2_adv_structural": simplicity_advanced(net),
         "places"           : len(net.places),
@@ -129,6 +151,7 @@ def discover_imf(log, noise_threshold=0.0):
 def print_metrics_table(m):
     targets = {
         "fitness_tbr"      : TARGET_FITNESS,
+        "perc_fit_traces"  : 0.80,
         "precision_etc"    : TARGET_PRECISION,
         "generalization"   : TARGET_GENERALIZATION,
         "simplicity_pm4py" : None,
@@ -137,6 +160,7 @@ def print_metrics_table(m):
     }
     tgt_str = {
         "fitness_tbr"      : f">={TARGET_FITNESS}",
+        "perc_fit_traces"  : ">=0.80",
         "precision_etc"    : f">={TARGET_PRECISION}",
         "generalization"   : f">={TARGET_GENERALIZATION}",
         "simplicity_pm4py" : "—",

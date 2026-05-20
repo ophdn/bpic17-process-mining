@@ -46,7 +46,7 @@ common.print_removal_stats(n_v2b, n_v2c, n_raw, label_before="V2b")
 # ═════════════════════════════════════════════════════════════════════════════
 print("\nDiscovering IMf on V2c log …")
 net, im, fm = common.discover_imf(log_v2c)
-m = common.compute_metrics(log_v1, net, im, fm)
+m = common.compute_metrics(log_v1, net, im, fm, log_train=log_v2c)
 
 print("\n" + "=" * 68)
 print("  V2c — Fraud filter  |  QUALITY METRICS  (vs V1 lifecycle-filtered log)")

@@ -98,7 +98,7 @@ common.print_removal_stats(n_v1, n_v2c, n_raw, label_before="V1")
 
 print("\nDiscovering IMf on V2c log …")
 net, im, fm = common.discover_imf(log_v2c)
-m_v2c = common.compute_metrics(log_v1, net, im, fm)
+m_v2c = common.compute_metrics(log_v1, net, im, fm, log_train=log_v2c)
 
 print("\n  V2c — QUALITY METRICS  (vs V1 lifecycle-filtered log)")
 common.print_metrics_table(m_v2c)
@@ -127,7 +127,7 @@ print(f"\n  Total coverage: {n_v2d} / {n_raw} cases retained "
 
 print("\nDiscovering IMf on V2d log …")
 net, im, fm = common.discover_imf(log_v2d)
-m_v2d = common.compute_metrics(log_v1, net, im, fm)
+m_v2d = common.compute_metrics(log_v1, net, im, fm, log_train=log_v2d)
 
 print("\n  V2d — QUALITY METRICS  (vs V1 lifecycle-filtered log)")
 common.print_metrics_table(m_v2d)

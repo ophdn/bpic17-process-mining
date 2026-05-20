@@ -46,7 +46,7 @@ common.print_removal_stats(n_v2a, n_v2b, n_raw, label_before="V2a")
 # ═════════════════════════════════════════════════════════════════════════════
 print("\nDiscovering IMf on V2b log …")
 net, im, fm = common.discover_imf(log_v2b)
-m = common.compute_metrics(log_v1, net, im, fm)
+m = common.compute_metrics(log_v1, net, im, fm, log_train=log_v2b)
 
 print("\n" + "=" * 68)
 print("  V2b — Endpoint filter  |  QUALITY METRICS  (vs V1 lifecycle-filtered log)")

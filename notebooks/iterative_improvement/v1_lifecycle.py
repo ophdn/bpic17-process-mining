@@ -38,7 +38,7 @@ print(f"  Activities : {a_raw} -> {a_v1}")
 # ═════════════════════════════════════════════════════════════════════════════
 print("\nDiscovering IMf on V1 log …")
 net, im, fm = common.discover_imf(log_v1)
-m = common.compute_metrics(log_v1, net, im, fm)
+m = common.compute_metrics(log_v1, net, im, fm, log_train=log_v1)
 
 print("\n" + "=" * 68)
 print("  V1 — Lifecycle filter  |  QUALITY METRICS  (vs V1 lifecycle-filtered log)")

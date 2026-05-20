@@ -26,11 +26,11 @@ import common
 # ═════════════════════════════════════════════════════════════════════════════
 log_raw, n_raw, v_raw, a_raw = common.load_raw_log()
 
-LOG_FR_V2D_PKL = os.path.join(common.OUTPUT_DIR, "log_fr_v2d.pkl")
 print(f"\nLoading V1 log (evaluation baseline) from {common.LOG_V1_PKL} …")
-log_v1 = common.load_log_pkl(common.LOG_V1_PKL)
+log_v2a = common.load_log_pkl(common.LOG_V1_PKL)
 
-print(f"\nLoading fraud+rare V2d log from {LOG_FR_V2D_PKL} …")
+LOG_FR_V2D_PKL = os.path.join(common.OUTPUT_DIR, "log_fr_v2d.pkl")
+print(f"\nLoading V2d log (V1→V2c→V2d, no endpoint filter) from {LOG_FR_V2D_PKL} …")
 log_v2 = common.load_log_pkl(LOG_FR_V2D_PKL)
 n_v2, v_v2, a_v2 = common.log_summary(log_v2, "V2")
 
@@ -41,24 +41,25 @@ print(f"\n  Log entering V3: {n_v2} / {n_raw} cases  "
 # ═════════════════════════════════════════════════════════════════════════════
 # V3: NOISE THRESHOLD SWEEP
 # ═════════════════════════════════════════════════════════════════════════════
-NOISE_THRESHOLDS = [0.2, 0.3, 0.4, 0.5]
+NOISE_THRESHOLDS = [0.2, 0.3, 0.4,]
 v3_candidates = []
 records = []
 
 print(f"\nRunning noise threshold sweep over {NOISE_THRESHOLDS} …")
 print(f"\n  {'noise':>6}  {'fitness':>8}  {'precision':>10}"
-      f"  {'general.':>10}  {'places':>7}  {'trans':>6}  {'status'}")
-print(f"  {'-'*72}")
+      f"  {'general.':>10}  {'fit_traces':>10}  {'places':>7}  {'trans':>6}  {'status'}")
+print(f"  {'-'*84}")
 
 for thresh in NOISE_THRESHOLDS:
     net_t, im_t, fm_t = common.discover_imf(log_v2, noise_threshold=thresh)
-    m_t = common.compute_metrics(log_v1, net_t, im_t, fm_t)
+    m_t = common.compute_metrics(log_v2a, net_t, im_t, fm_t, log_train=log_v2)
     v3_candidates.append((thresh, net_t, im_t, fm_t, m_t))
 
-    status = "OK (>= 0.80)" if m_t["fitness_tbr"] >= common.TARGET_FITNESS else "!! below 0.80"
+    status = "OK (> 79%)" if m_t["perc_fit_traces"] > 79 else "!! below 80%"
     print(f"  {thresh:>6.1f}  {m_t['fitness_tbr']:>8.4f}"
           f"  {m_t['precision_etc']:>10.4f}"
           f"  {m_t['generalization']:>10.4f}"
+          f"  {m_t['perc_fit_traces']:>10.4f}"
           f"  {m_t['places']:>7}  {m_t['transitions']:>6}  {status}")
 
     records.append({
@@ -72,9 +73,11 @@ for thresh in NOISE_THRESHOLDS:
 # ═════════════════════════════════════════════════════════════════════════════
 # SELECT BEST THRESHOLD
 # ═════════════════════════════════════════════════════════════════════════════
+PERC_FIT_TARGET = 79
+
 eligible = [
     (t, n, i, f, m) for t, n, i, f, m in v3_candidates
-    if m["fitness_tbr"] >= common.TARGET_FITNESS
+    if m["perc_fit_traces"] > PERC_FIT_TARGET
 ]
 
 fitness_warning = ""
@@ -82,15 +85,15 @@ if eligible:
     best = max(eligible, key=lambda x: x[0])   # highest noise = simplest model
     best_thresh, net_final, im_final, fm_final, m_final = best
     print(f"\n  Selected noise_threshold={best_thresh} "
-          f"(highest with fitness >= {common.TARGET_FITNESS}).")
+          f"(highest with perc_fit_traces > {PERC_FIT_TARGET:.0%}).")
 else:
-    best = max(v3_candidates, key=lambda x: x[4]["fitness_tbr"])
+    best = max(v3_candidates, key=lambda x: x[4]["perc_fit_traces"])
     best_thresh, net_final, im_final, fm_final, m_final = best
     fitness_warning = (
         f"\n  [WARNING] No noise_threshold in {NOISE_THRESHOLDS} achieves "
-        f"fitness >= {common.TARGET_FITNESS}.\n"
+        f"perc_fit_traces > {PERC_FIT_TARGET:.0%}.\n"
         f"  Selected threshold={best_thresh} (best available "
-        f"fitness={m_final['fitness_tbr']:.4f}).\n"
+        f"perc_fit_traces={m_final['perc_fit_traces']:.4f}).\n"
         f"  Consider reducing RARE_VARIANT_THRESHOLD or revisiting preprocessing."
     )
     print(fitness_warning)
@@ -130,6 +133,7 @@ METRICS_CSV_FR = os.path.join(common.OUTPUT_DIR, "iteration_metrics_fraud_rare.c
 new_df = pd.DataFrame(records)
 if os.path.exists(METRICS_CSV_FR):
     existing = pd.read_csv(METRICS_CSV_FR)
+    existing = existing[~existing["version"].str.startswith("V3")]
     df = pd.concat([existing, new_df], ignore_index=True)
 else:
     df = new_df

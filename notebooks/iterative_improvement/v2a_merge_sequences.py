@@ -46,7 +46,7 @@ print(f"  Activities : {a_v1} -> {a_v2a}")
 # ═════════════════════════════════════════════════════════════════════════════
 print("\nDiscovering IMf on V2a log …")
 net, im, fm = common.discover_imf(log_v2a)
-m = common.compute_metrics(log_v1, net, im, fm)
+m = common.compute_metrics(log_v1, net, im, fm, log_train=log_v2a)
 
 print("\n" + "=" * 68)
 print("  V2a — Merge sequences  |  QUALITY METRICS  (vs V1 lifecycle-filtered log)")

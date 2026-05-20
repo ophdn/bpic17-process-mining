@@ -48,7 +48,7 @@ print(f"\n  Total log coverage: {n_v2} / {n_raw} cases retained "
 # ═════════════════════════════════════════════════════════════════════════════
 print("\nDiscovering IMf on V2d log …")
 net, im, fm = common.discover_imf(log_v2)
-m = common.compute_metrics(log_v1, net, im, fm)
+m = common.compute_metrics(log_v1, net, im, fm, log_train=log_v2)
 
 print("\n" + "=" * 68)
 print("  V2d — Rare variant filter  |  QUALITY METRICS  (vs V1 lifecycle-filtered log)")
